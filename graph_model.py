@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 # import pandas as pd # No longer needed directly here
 import networkx as nx
-# import matplotlib.pyplot as plt # Removed
+import matplotlib.pyplot as plt # Re-added for visualization
 # import json # No longer needed directly here
 # from matplotlib.font_manager import FontProperties # Removed
 
 # 从新模块导入功能
-# from font_config import get_font_properties # Removed, font config not needed
+from font_config import get_font_properties # Re-added for visualization
 from graph_builder import build_graph
 
-# 1. 设置字体 # Removed
-# font = get_font_properties() # Removed
+# 1. 获取字体配置 (在构建图之前或之后都可以，这里放在前面)
+font = get_font_properties()
 
 # 2. 构建图
 print("正在从 graph_builder 构建图...")
@@ -50,10 +50,82 @@ else:
                 continue
             print(f"- {node_name}: 持有{degree}个实体的股份")
 
-# 移除所有 matplotlib 绘图相关的代码
-# plt.figure(figsize=(20, 15))
-# ... (所有 nx.draw_... 和 plt.savefig/show 代码块被移除) ...
-# print("'股权关系网络图.png' 已保存。")
-# plt.show()
+    # 3. 可视化并导出最终的图模型图片
+    print("\n正在生成图模型可视化图片...")
+    plt.figure(figsize=(25, 20)) # 保持较大的图像尺寸
 
-print("\ngraph_model.py 执行完毕，已输出图的统计信息。") 
+    # 调整布局算法和参数以提高可读性
+    pos = None
+    print("尝试使用 spring_layout 进行布局 (k=0.35, iterations=70)...")
+    try:
+        pos = nx.spring_layout(G, k=0.35, iterations=70, seed=42)
+        print("初步 spring_layout 成功。")
+    except Exception as e_spring1:
+        print(f"初步 spring_layout 失败 ({e_spring1}), 尝试 kamada_kawai_layout...")
+        try:
+            pos = nx.kamada_kawai_layout(G)
+            print("kamada_kawai_layout 成功。")
+        except Exception as e_kk:
+            print(f"kamada_kawai_layout 也失败 ({e_kk}), 尝试 k 值较小的 spring_layout (k=0.15, iterations=50)...")
+            try:
+                pos = nx.spring_layout(G, k=0.15, iterations=50, seed=42) # 之前的回退方案
+                print("备用 spring_layout 成功。")
+            except Exception as e_spring2:
+                print(f"备用 spring_layout 也失败 ({e_spring2}), 使用随机布局。")
+                pos = nx.random_layout(G, seed=42)
+    
+    # 按类型为节点着色
+    node_colors = []
+    for node_id in G.nodes(): # Iterate over node_id directly
+        node_data = G.nodes[node_id]
+        node_type = node_data.get('type', '')
+        if node_type == 'P':  # 个人股东
+            node_colors.append('skyblue')
+        elif node_type == 'E':  # 企业股东
+            node_colors.append('lightgreen')
+        else:  # 其他类型或未知类型
+            node_colors.append('lightcoral') # Changed for better visibility
+
+    # 画节点
+    nx.draw_networkx_nodes(G, pos, node_size=350, node_color=node_colors, alpha=0.9)
+
+    # 画边
+    nx.draw_networkx_edges(G, pos, width=1.0, alpha=0.5, arrows=True, arrowsize=12, connectionstyle='arc3,rad=0.05')
+
+    # 添加节点标签（显示名称和Level）
+    labels = {}
+    for nid in G.nodes():
+        name = G.nodes[nid].get('name', str(nid))[:20] # Truncate name
+        level = G.nodes[nid].get('level', 'N/A')
+        labels[nid] = f"{name}\nLvl: {level}" # Display name and level
+    
+    nx.draw_networkx_labels(G, pos, labels=labels, font_size=6, font_family=font.get_name() if font else None, bbox=dict(facecolor='white', alpha=0.3, edgecolor='none', boxstyle='round,pad=0.1'))
+
+    # 添加边标签（显示持股比例）
+    edge_labels = {}
+    for u, v, data in G.edges(data=True):
+        percent_val = data.get('percent', '')
+        if percent_val and str(percent_val).strip() != '':
+            edge_labels[(u, v)] = str(percent_val)[:5] # Truncate for clarity
+
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=5, font_family=font.get_name() if font else None)
+
+    # 设置标题
+    title_text = '股权关系网络图 (由graph_model.py生成) - Child -> Parent'
+    plt.title(title_text, fontproperties=font, fontsize=18)
+        
+    plt.axis('off')
+    plt.tight_layout()
+
+    # 保存图像
+    output_image_path = 'graph_model_visualization.png'
+    try:
+        plt.savefig(output_image_path, dpi=300, bbox_inches='tight')
+        print(f"\n图模型已保存至 '{output_image_path}'")
+    except Exception as e_save:
+        print(f"保存图像 '{output_image_path}' 失败: {e_save}")
+
+    # (可选) 显示图像 - 在某些环境下可能不希望自动弹出
+    # plt.show() 
+
+print("\ngraph_model.py 执行完毕。") 

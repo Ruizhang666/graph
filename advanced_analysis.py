@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# import pandas as pd # No longer needed directly here
+import pandas as pd # Added import
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
