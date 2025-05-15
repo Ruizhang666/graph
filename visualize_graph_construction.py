@@ -2,9 +2,15 @@
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
+import os
 from font_config import get_font_properties # For labels
 
-def visualize_step_by_step_construction(csv_path='三层股权穿透输出数据.csv', rows_to_visualize=20, pause_duration=0.5):
+# 确保输出目录存在
+os.makedirs('outputs/reports', exist_ok=True)
+os.makedirs('outputs/images', exist_ok=True)
+os.makedirs('outputs/temp', exist_ok=True)
+
+def visualize_step_by_step_construction(csv_path='三层股权穿透输出数据.csv', rows_to_visualize=20, pause_duration=0.5, save_final=True):
     """
     逐行读取CSV数据，并使用matplotlib动态可视化NetworkX图的构建过程。
     主要展示基于主行数据和parent_id的节点与边添加。
@@ -44,7 +50,7 @@ def visualize_step_by_step_construction(csv_path='三层股权穿透输出数据
             print(f"已达到可视化行数上限: {rows_to_visualize} 行。")
             break
         
-        print(f"\\n处理第 {index + 1} 行数据:")
+        print(f"\n处理第 {index + 1} 行数据:")
 
         node_added_this_step = False
         edge_added_this_step = False
@@ -152,13 +158,42 @@ def visualize_step_by_step_construction(csv_path='三层股权穿透输出数据
 
     plt.ioff() # 关闭交互模式
     ax.set_title(f"最终图状态 ({processed_rows_count} 行数据已处理)", fontproperties=font, fontsize=12)
+    
+    # 保存最终图状态
+    if save_final:
+        final_image_path = 'outputs/images/graph_construction_final.png'
+        plt.savefig(final_image_path, dpi=300, bbox_inches='tight')
+        print(f"\n最终图状态已保存至: {final_image_path}")
+        
+        # 保存图构建过程的基本统计信息到文本文件
+        stats_report_path = 'outputs/reports/graph_construction_stats.txt'
+        with open(stats_report_path, 'w', encoding='utf-8') as f:
+            f.write(f"图构建统计报告\n{'='*40}\n\n")
+            f.write(f"处理的行数: {processed_rows_count}/{len(df) if df is not None else '未知'}\n")
+            f.write(f"节点总数: {G.number_of_nodes()}\n")
+            f.write(f"边总数: {G.number_of_edges()}\n\n")
+            
+            f.write("节点类型分布:\n")
+            node_type_count = {'P': 0, 'E': 0, '其他': 0}
+            for node_id in G.nodes():
+                node_type = G.nodes[node_id].get('type', '')
+                if node_type == 'P': node_type_count['P'] += 1
+                elif node_type == 'E': node_type_count['E'] += 1
+                else: node_type_count['其他'] += 1
+            for type_name, count in node_type_count.items():
+                f.write(f"  - {type_name}: {count}\n")
+            
+            f.write("\n图构建过程完成。\n")
+        print(f"图构建统计信息已保存至: {stats_report_path}")
+    
     if not (rows_to_visualize > 0 and processed_rows_count >= rows_to_visualize): # 如果不是因为行数限制而停止
         plt.show() # 保持最后一个窗口打开，除非是被行数限制中断
     else: # 如果是行数限制中断，也显示一下最终状态
-        print("\\n可视化因达到行数限制而结束。显示当前图状态...")
+        print("\n可视化因达到行数限制而结束。显示当前图状态...")
         plt.show(block=True) # block=True here to keep window until closed
 
     print("逐步可视化构建过程结束。")
+    return G
 
 if __name__ == '__main__':
     print("开始执行逐行图构建可视化脚本...")
@@ -171,6 +206,7 @@ if __name__ == '__main__':
     
     visualize_step_by_step_construction(
         csv_path='三层股权穿透输出数据.csv', 
-        rows_to_visualize=100,  # 默认可视化25行
-        pause_duration=0.7      # 每步暂停0.7秒
+        rows_to_visualize=100,  # 默认可视化100行
+        pause_duration=0.7,     # 每步暂停0.7秒
+        save_final=True         # 保存最终图状态到输出文件夹
     ) 

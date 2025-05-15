@@ -12,7 +12,7 @@
 - **模块化设计**: 
     - `graph_builder.py`: 封装了核心的图构建逻辑。
     - `font_config.py`: 统一管理中文字体配置，确保图表中文显示正常。
-- **可配置输出**: 生成多种图片（.png）和文本报告（.txt）便于结果查阅和分享。
+- **可配置输出**: 生成多种图片（.png）和文本报告（.txt），现在统一保存到组织化的输出文件夹中，便于结果查阅和分享。
 
 ## 项目结构
 
@@ -21,17 +21,25 @@ graph/
 ├── graph_model.py               # 基础网络建模与可视化
 ├── advanced_analysis.py         # 高级网络分析与报告生成
 ├── query_node_neighborhood.py   # 节点邻域查询与可视化
-├── graph_builder.py             #核心图构建模块
+├── graph_builder.py             # 核心图构建模块
 ├── font_config.py               # 中文字体配置模块
+├── visualize_graph_construction.py # 图构建过程可视化
 ├── 三层股权穿透输出数据.csv       # 【示例】输入的股权数据CSV文件
 ├── requirements.txt             # Python依赖包列表
 ├── README.md                    # 本文件
-├── graph_model_visualization.png # graph_model.py 输出的示例图
-├── 股权关系社区结构.png           # advanced_analysis.py 输出的示例图
-├── 最终控制人网络图.png           # advanced_analysis.py 输出的示例图
-├── advanced_analysis_report.txt # advanced_analysis.py 输出的文本报告
-├── query_result_*.png           # query_node_neighborhood.py 输出的示例图
-└── query_result_*.txt           # query_node_neighborhood.py 输出的文本报告
+├── outputs/                     # 输出文件夹
+│   ├── reports/                 # 文本报告保存目录
+│   │   ├── advanced_analysis_report.txt  # 高级分析报告
+│   │   ├── query_result_*.txt           # 节点查询结果报告
+│   │   └── graph_construction_stats.txt # 图构建统计报告
+│   ├── images/                  # 可视化图像保存目录
+│   │   ├── graph_model_visualization.png # 整体网络可视化图
+│   │   ├── 股权关系社区结构.png           # 社区检测结果图
+│   │   ├── 最终控制人网络图.png           # 最终控制人分析图
+│   │   ├── query_result_*.png           # 节点邻域查询图
+│   │   └── graph_construction_final.png # 图构建最终状态图
+│   └── temp/                    # 临时文件目录
+└── [旧版输出文件]               # 项目根目录下可能存在的旧版输出文件
 ```
 
 ## 安装依赖
@@ -73,7 +81,7 @@ graph/
     ```
     - 输出: 
         - 控制台打印图的基本统计信息。
-        - 生成 `graph_model_visualization.png` 图片。
+        - 生成 `outputs/images/graph_model_visualization.png` 图片。
 
 2.  **高级网络分析与报告生成 (`advanced_analysis.py`)**
     ```bash
@@ -81,8 +89,8 @@ graph/
     ```
     - 输出:
         - 控制台打印分析过程和总结。
-        - 生成 `advanced_analysis_report.txt` 包含详细分析结果和逻辑说明的文本报告。
-        - 生成/更新 `股权关系社区结构.png` 和 `最终控制人网络图.png` 等可视化图片。
+        - 生成 `outputs/reports/advanced_analysis_report.txt` 包含详细分析结果和逻辑说明的文本报告。
+        - 生成 `outputs/images/股权关系社区结构.png` 和 `outputs/images/最终控制人网络图.png` 等可视化图片。
 
 3.  **节点邻域查询 (`query_node_neighborhood.py`)**
     
@@ -100,8 +108,27 @@ graph/
     ```
     - 输出:
         - 控制台打印查询过程和总结。
-        - 生成 `query_result_节点名称.txt` 包含该节点及其N度邻域内其他节点和关系的详细信息。
-        - 生成 `query_result_节点名称.png` 可视化该邻域网络。
+        - 生成 `outputs/reports/query_result_节点名称.txt` 包含该节点及其N度邻域内其他节点和关系的详细信息。
+        - 生成 `outputs/images/query_result_节点名称.png` 可视化该邻域网络。
+
+4.  **图构建过程可视化 (`visualize_graph_construction.py`)**
+    ```bash
+    python visualize_graph_construction.py
+    ```
+    - 输出:
+        - 控制台打印图构建过程信息。
+        - 生成 `outputs/images/graph_construction_final.png` 图构建最终状态图。
+        - 生成 `outputs/reports/graph_construction_stats.txt` 图构建统计报告。
+
+## 输出文件夹结构
+
+项目现在使用结构化的输出文件夹组织，文件分类如下：
+
+- **outputs/reports/** - 存放所有文本报告和分析结果
+- **outputs/images/** - 存放所有可视化图像
+- **outputs/temp/** - 存放临时文件和中间处理结果
+
+当运行各个脚本时，所有输出文件将自动保存到相应的文件夹中。如果文件夹不存在，将自动创建。
 
 ## 注意事项
 

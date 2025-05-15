@@ -6,6 +6,11 @@ from graph_builder import build_graph
 from font_config import get_font_properties
 import os # For path operations
 
+# 确保输出目录存在
+os.makedirs('outputs/reports', exist_ok=True)
+os.makedirs('outputs/images', exist_ok=True)
+os.makedirs('outputs/temp', exist_ok=True)
+
 def find_node_by_name(graph, name_query):
     """在图中根据'name'属性查找节点ID。"""
     for node_id, data in graph.nodes(data=True):
@@ -53,8 +58,8 @@ def query_and_visualize(target_node_name, radius=2):
     
     # Sanitize node name for filenames
     sanitized_node_name = target_node_name.replace(' ', '_').replace('/', '_').replace('(','_').replace(')','_')
-    txt_output_filename = f"query_result_{sanitized_node_name}.txt"
-    img_output_filename = f"query_result_{sanitized_node_name}.png"
+    txt_output_filename = f"outputs/reports/query_result_{sanitized_node_name}.txt"
+    img_output_filename = f"outputs/images/query_result_{sanitized_node_name}.png"
 
     with open(txt_output_filename, 'w', encoding='utf-8') as f_out:
         write_and_print(f_out, f"查询报告: 节点 '{target_node_name}' (ID: {target_node_id}) 的 {radius}-度邻域分析")
@@ -62,15 +67,15 @@ def query_and_visualize(target_node_name, radius=2):
 
         # 提取N度邻居子图 (包括中心节点)
         # ego_graph includes the target_node_id itself
-        write_and_print(f_out, f"\\n正在提取 {radius}-度邻域子图...")
+        write_and_print(f_out, f"\n正在提取 {radius}-度邻域子图...")
         G_sub = nx.ego_graph(G_full, target_node_id, radius=radius, undirected=False).copy()
         write_and_print(f_out, f"子图包含 {G_sub.number_of_nodes()} 个节点和 {G_sub.number_of_edges()} 条边。")
 
         if G_sub.number_of_nodes() == 0:
-            write_and_print(f_out, "\\n错误: 生成的子图为空。查询的节点可能是一个孤立节点。")
+            write_and_print(f_out, "\n错误: 生成的子图为空。查询的节点可能是一个孤立节点。")
             return
         
-        write_and_print(f_out, f"\\n--- 子图内节点详细信息 (按节点ID排序) ---")
+        write_and_print(f_out, f"\n--- 子图内节点详细信息 (按节点ID排序) ---")
         sorted_sub_nodes = sorted(list(G_sub.nodes(data=True)), key=lambda x: x[0])
 
         for node_id, node_data in sorted_sub_nodes:
@@ -102,8 +107,8 @@ def query_and_visualize(target_node_name, radius=2):
         write_and_print(f_out, "="*50)
         write_and_print(f_out, f"报告结束。保存在 {txt_output_filename}")
 
-    print(f"\\n详细信息已写入: {txt_output_filename}")
-    print(f"\\n正在生成 '{target_node_name}' 的 {radius}-度邻域可视化图...")
+    print(f"\n详细信息已写入: {txt_output_filename}")
+    print(f"\n正在生成 '{target_node_name}' 的 {radius}-度邻域可视化图...")
     plt.figure(figsize=(15, 12)) # Increased figure size slightly for potentially larger graph
     
     try:
