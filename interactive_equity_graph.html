@@ -1,0 +1,845 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 800px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="q5d6c6e2ee5e04a76af906869b8db252e">q5d6c6e2ee5e04a76af906869b8db252e</option>
+                                
+                                    <option value="q53439a653c3545c2bb6d2b17ef3009a5">q53439a653c3545c2bb6d2b17ef3009a5</option>
+                                
+                                    <option value="王云娟">王云娟</option>
+                                
+                                    <option value="章立">章立</option>
+                                
+                                    <option value="q51d63cb97ad56fe0677663d6894f382d">q51d63cb97ad56fe0677663d6894f382d</option>
+                                
+                                    <option value="q91ad208643d20e24aaddc2e0442951f3">q91ad208643d20e24aaddc2e0442951f3</option>
+                                
+                                    <option value="qeb3d76b013bfb3a02fb7de2779f9073c">qeb3d76b013bfb3a02fb7de2779f9073c</option>
+                                
+                                    <option value="q24a4a64e9e66b9da9074272e14f190fa">q24a4a64e9e66b9da9074272e14f190fa</option>
+                                
+                                    <option value="q39ddf61faffb427f3b8a055d8f930300">q39ddf61faffb427f3b8a055d8f930300</option>
+                                
+                                    <option value="范红卫">范红卫</option>
+                                
+                                    <option value="德诚利国际集团有限公司">德诚利国际集团有限公司</option>
+                                
+                                    <option value="香港中央结算有限公司">香港中央结算有限公司</option>
+                                
+                                    <option value="玄元私募基金投资管理（广东）有限公司-玄元元宝16号私募证券投资基金">玄元私募基金投资管理（广东）有限公司-玄元元宝16号私募证券投资基金</option>
+                                
+                                    <option value="q798313c3f322e9e78ec3e761dd1c46e0">q798313c3f322e9e78ec3e761dd1c46e0</option>
+                                
+                                    <option value="玄元私募基金投资管理（广东）有限公司-玄元元宝17号私募证券投资基金">玄元私募基金投资管理（广东）有限公司-玄元元宝17号私募证券投资基金</option>
+                                
+                                    <option value="玄元私募基金投资管理（广东）有限公司-玄元元宝18号私募证券投资基金">玄元私募基金投资管理（广东）有限公司-玄元元宝18号私募证券投资基金</option>
+                                
+                                    <option value="qc28d623a7013cdad35d346e9c427197e">qc28d623a7013cdad35d346e9c427197e</option>
+                                
+                                    <option value="qfd8502ce71683f1517b664bcd0ff409a">qfd8502ce71683f1517b664bcd0ff409a</option>
+                                
+                                    <option value="q634b60d18735a97d00437ab3602e0102">q634b60d18735a97d00437ab3602e0102</option>
+                                
+                                    <option value="qf7555e5d4aad7a9f538d2ab22bd9df3b">qf7555e5d4aad7a9f538d2ab22bd9df3b</option>
+                                
+                                    <option value="q6a0e3b932e39386964687df9a5f3dcb3">q6a0e3b932e39386964687df9a5f3dcb3</option>
+                                
+                                    <option value="qa178aa8536e028d1d5572668d7344743">qa178aa8536e028d1d5572668d7344743</option>
+                                
+                                    <option value="qc8e352cbc82b4924af68737206ba39c7">qc8e352cbc82b4924af68737206ba39c7</option>
+                                
+                                    <option value="qdbb28ead658f26509c71d35c0db7d39c">qdbb28ead658f26509c71d35c0db7d39c</option>
+                                
+                                    <option value="q506c05ca24ad35544aec2317e4e24958">q506c05ca24ad35544aec2317e4e24958</option>
+                                
+                                    <option value="qd324d0e379fdb43c94e24fb5ee815ea7">qd324d0e379fdb43c94e24fb5ee815ea7</option>
+                                
+                                    <option value="q99d815b2a496153f9d2772517fb83b6d">q99d815b2a496153f9d2772517fb83b6d</option>
+                                
+                                    <option value="恒逸石化股份有限公司-第六期员工持股计划">恒逸石化股份有限公司-第六期员工持股计划</option>
+                                
+                                    <option value="上海胜帮私募基金管理有限公司-共青城胜帮凯米投资合伙企业（有限合伙）">上海胜帮私募基金管理有限公司-共青城胜帮凯米投资合伙企业（有限合伙）</option>
+                                
+                                    <option value="q026c721b1f464d889a6e9d48b7149f29">q026c721b1f464d889a6e9d48b7149f29</option>
+                                
+                                    <option value="恒逸石化股份有限公司-第五期员工持股计划">恒逸石化股份有限公司-第五期员工持股计划</option>
+                                
+                                    <option value="q63aae46aff62ac777d1103d883f63656">q63aae46aff62ac777d1103d883f63656</option>
+                                
+                                    <option value="杭州博海汇金资产管理有限公司-博海汇金汇鑫8号证券私募投资基金">杭州博海汇金资产管理有限公司-博海汇金汇鑫8号证券私募投资基金</option>
+                                
+                                    <option value="西藏信托有限公司-西藏信托-泓景29号集合资金信托计划">西藏信托有限公司-西藏信托-泓景29号集合资金信托计划</option>
+                                
+                                    <option value="陕西省国际信托股份有限公司-陕国投·恒逸石化控股股东及其附属企业员工持股集合资金信托计划">陕西省国际信托股份有限公司-陕国投·恒逸石化控股股东及其附属企业员工持股集合资金信托计划</option>
+                                
+                                    <option value="天津鼎晖元博股权投资基金">天津鼎晖元博股权投资基金</option>
+                                
+                                    <option value="中国烟草总公司四川公司">中国烟草总公司四川公司</option>
+                                
+                                    <option value="天津鼎晖股权投资一期基金">天津鼎晖股权投资一期基金</option>
+                                
+                                    <option value="四川省石油总公司涪陵分公司等">四川省石油总公司涪陵分公司等</option>
+                                
+                                    <option value="q1303953a2b2c11eebaac00163e355098">q1303953a2b2c11eebaac00163e355098</option>
+                                
+                                    <option value="刘洪亮">刘洪亮</option>
+                                
+                                    <option value="田式超">田式超</option>
+                                
+                                    <option value="qf6a006e2b7204672abc22f767cfbd3a2">qf6a006e2b7204672abc22f767cfbd3a2</option>
+                                
+                                    <option value="qc54ef82510cb4ceeac827c9d47bb31fb">qc54ef82510cb4ceeac827c9d47bb31fb</option>
+                                
+                                    <option value="qc59fa42a4980ddac34bccfe86a551df3">qc59fa42a4980ddac34bccfe86a551df3</option>
+                                
+                                    <option value="qd11eb37fb5ddcee6a34b120964779263">qd11eb37fb5ddcee6a34b120964779263</option>
+                                
+                                    <option value="柯惠英">柯惠英</option>
+                                
+                                    <option value="王志蒙">王志蒙</option>
+                                
+                                    <option value="江海燕">江海燕</option>
+                                
+                                    <option value="季惠君">季惠君</option>
+                                
+                                    <option value="季志君">季志君</option>
+                                
+                                    <option value="q60024c73c3dc4f22ba543a8595daaf44">q60024c73c3dc4f22ba543a8595daaf44</option>
+                                
+                                    <option value="q5cf43fbc80fad22790d334101ce6b391">q5cf43fbc80fad22790d334101ce6b391</option>
+                                
+                                    <option value="q8c68d6c8b53a4f488581a2cd4dd34e51">q8c68d6c8b53a4f488581a2cd4dd34e51</option>
+                                
+                                    <option value="唐宇清">唐宇清</option>
+                                
+                                    <option value="毛青军">毛青军</option>
+                                
+                                    <option value="储春银">储春银</option>
+                                
+                                    <option value="郭健">郭健</option>
+                                
+                                    <option value="王赛慧">王赛慧</option>
+                                
+                                    <option value="任霄">任霄</option>
+                                
+                                    <option value="方真荣">方真荣</option>
+                                
+                                    <option value="时贞仑">时贞仑</option>
+                                
+                                    <option value="q522d2812423e424e859a8c3cf057c696">q522d2812423e424e859a8c3cf057c696</option>
+                                
+                                    <option value="qcd958990b49440c288cf0ce3fb6a6400">qcd958990b49440c288cf0ce3fb6a6400</option>
+                                
+                                    <option value="q558d1d56844942c599d378aba8aaa68a">q558d1d56844942c599d378aba8aaa68a</option>
+                                
+                                    <option value="陈海峰">陈海峰</option>
+                                
+                                    <option value="周剑凌">周剑凌</option>
+                                
+                                    <option value="陈海滨">陈海滨</option>
+                                
+                                    <option value="qcedbd118d72a485ea33e83b20c86d129">qcedbd118d72a485ea33e83b20c86d129</option>
+                                
+                                    <option value="q17faa060c10e4adab2ae2e7fd59c7e61">q17faa060c10e4adab2ae2e7fd59c7e61</option>
+                                
+                                    <option value="qd6cd13b84d7f11ee82ec00163e355098">qd6cd13b84d7f11ee82ec00163e355098</option>
+                                
+                                    <option value="张飚">张飚</option>
+                                
+                                    <option value="qca6f5cac214540a7123da22e73b180a2">qca6f5cac214540a7123da22e73b180a2</option>
+                                
+                                    <option value="q9f6b5f42352ec962efd8d82f49047f17">q9f6b5f42352ec962efd8d82f49047f17</option>
+                                
+                                    <option value="qbb0db37d1243a0404eaa7dacf298dc92">qbb0db37d1243a0404eaa7dacf298dc92</option>
+                                
+                                    <option value="浙商证券资管-浙江省国有资本运营有限公司-浙商资管浙江国有上市公司高质量发展单一资产管理计划">浙商证券资管-浙江省国有资本运营有限公司-浙商资管浙江国有上市公司高质量发展单一资产管理计划</option>
+                                
+                                    <option value="q1c203b5ef43811ecbbce00163e0ee983">q1c203b5ef43811ecbbce00163e0ee983</option>
+                                
+                                    <option value="中国农业银行股份有限公司-中证500交易型开放式指数证券投资基金">中国农业银行股份有限公司-中证500交易型开放式指数证券投资基金</option>
+                                
+                                    <option value="上海涌津投资管理有限公司-涌津涌鑫多策略17号私募证券投资基金">上海涌津投资管理有限公司-涌津涌鑫多策略17号私募证券投资基金</option>
+                                
+                                    <option value="上海涌津投资管理有限公司-涌津涌鑫多策略16号私募证券投资基金">上海涌津投资管理有限公司-涌津涌鑫多策略16号私募证券投资基金</option>
+                                
+                                    <option value="陈军">陈军</option>
+                                
+                                    <option value="无限售条件流通股">无限售条件流通股</option>
+                                
+                                    <option value="有限售条件流通股">有限售条件流通股</option>
+                                
+                                    <option value="q13f522eea4ab11eeb66400163e355098">q13f522eea4ab11eeb66400163e355098</option>
+                                
+                                    <option value="qfe6ef60363b84644a8ceca1208a5ef6b">qfe6ef60363b84644a8ceca1208a5ef6b</option>
+                                
+                                    <option value="qdf3b2963383946eebcbcd4c57c0deb63">qdf3b2963383946eebcbcd4c57c0deb63</option>
+                                
+                                    <option value="q88337256d61f117a0b37dd422d057993">q88337256d61f117a0b37dd422d057993</option>
+                                
+                                    <option value="沈颖华">沈颖华</option>
+                                
+                                    <option value="q83ef7642ae1e81e5ce68380ebd88671d">q83ef7642ae1e81e5ce68380ebd88671d</option>
+                                
+                                    <option value="葛丽娜">葛丽娜</option>
+                                
+                                    <option value="王掌权（发起人）">王掌权（发起人）</option>
+                                
+                                    <option value="q40e5d6d4b61f63d81612af77aaae21c3">q40e5d6d4b61f63d81612af77aaae21c3</option>
+                                
+                                    <option value="qffea752789a0e87b9ddd04cdc85cfc8c">qffea752789a0e87b9ddd04cdc85cfc8c</option>
+                                
+                                    <option value="王河清">王河清</option>
+                                
+                                    <option value="王建清">王建清</option>
+                                
+                                    <option value="侯乐友">侯乐友</option>
+                                
+                                    <option value="王学清">王学清</option>
+                                
+                                    <option value="王金友">王金友</option>
+                                
+                                    <option value="侯效梅">侯效梅</option>
+                                
+                                    <option value="徐汝增">徐汝增</option>
+                                
+                                    <option value="qff3ad5f2a99c11ecb44600163e0ee983">qff3ad5f2a99c11ecb44600163e0ee983</option>
+                                
+                                    <option value="qd554385addeb4278db733733bac68557">qd554385addeb4278db733733bac68557</option>
+                                
+                                    <option value="q9b4e2c574cf4a3c4cf23159dcbf8a0fa">q9b4e2c574cf4a3c4cf23159dcbf8a0fa</option>
+                                
+                                    <option value="qd48c914853f177efc7a6ddd8bb95a522">qd48c914853f177efc7a6ddd8bb95a522</option>
+                                
+                                    <option value="q994ba7f725cc45809fd951b53cc30034">q994ba7f725cc45809fd951b53cc30034</option>
+                                
+                                    <option value="李巍">李巍</option>
+                                
+                                    <option value="刘永好">刘永好</option>
+                                
+                                    <option value="刘畅">刘畅</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "gray", "id": "q5d6c6e2ee5e04a76af906869b8db252e", "label": "\u5b81\u6ce2\u5219\u7acb\u8d38\u6613\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u5219\u7acb\u8d38\u6613\u6709\u9650\u516c\u53f8\nType: \nLevel: 0"}, {"color": "lightgreen", "id": "q53439a653c3545c2bb6d2b17ef3009a5", "label": "\u6d77\u5357\u5609\u6c34\u8d38\u6613\u6709\u9650\u8d23\u4efb\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d77\u5357\u5609\u6c34\u8d38\u6613\u6709\u9650\u8d23\u4efb\u516c\u53f8\nType: E\nLevel: 1"}, {"color": "skyblue", "id": "\u738b\u4e91\u5a1f", "label": "\u738b\u4e91\u5a1f", "shape": "dot", "size": 15, "title": "\u738b\u4e91\u5a1f\nType: P\nLevel: 2"}, {"color": "skyblue", "id": "\u7ae0\u7acb", "label": "\u7ae0\u7acb", "shape": "dot", "size": 15, "title": "\u7ae0\u7acb\nType: P\nLevel: 2"}, {"color": "gray", "id": "q51d63cb97ad56fe0677663d6894f382d", "label": "\u6052\u529b\u77f3\u5316\uff08\u5927\u8fde\uff09\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6052\u529b\u77f3\u5316\uff08\u5927\u8fde\uff09\u6709\u9650\u516c\u53f8\nType: \nLevel: 0"}, {"color": "lightgreen", "id": "q91ad208643d20e24aaddc2e0442951f3", "label": "\u6052\u529b\u6295\u8d44\uff08\u5927\u8fde\uff09\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6052\u529b\u6295\u8d44\uff08\u5927\u8fde\uff09\u6709\u9650\u516c\u53f8\nType: E\nLevel: 1"}, {"color": "lightgreen", "id": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "\u6052\u529b\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6052\u529b\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8\nType: E\nLevel: 2"}, {"color": "lightgreen", "id": "q24a4a64e9e66b9da9074272e14f190fa", "label": "\u6052\u529b\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6052\u529b\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "q39ddf61faffb427f3b8a055d8f930300", "label": "\u6052\u80fd\u6295\u8d44\uff08\u5927\u8fde\uff09\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6052\u80fd\u6295\u8d44\uff08\u5927\u8fde\uff09\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "skyblue", "id": "\u8303\u7ea2\u536b", "label": "\u8303\u7ea2\u536b", "shape": "dot", "size": 15, "title": "\u8303\u7ea2\u536b\nType: P\nLevel: 3"}, {"color": "orange", "id": "\u5fb7\u8bda\u5229\u56fd\u9645\u96c6\u56e2\u6709\u9650\u516c\u53f8", "label": "\u5fb7\u8bda\u5229\u56fd\u9645\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5fb7\u8bda\u5229\u56fd\u9645\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u9999\u6e2f\u4e2d\u592e\u7ed3\u7b97\u6709\u9650\u516c\u53f8", "label": "\u9999\u6e2f\u4e2d\u592e\u7ed3\u7b97\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u9999\u6e2f\u4e2d\u592e\u7ed3\u7b97\u6709\u9650\u516c\u53f8\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d16\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "label": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d16\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "shape": "dot", "size": 15, "title": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d16\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1\nType: UE\nLevel: 3"}, {"color": "lightgreen", "id": "q798313c3f322e9e78ec3e761dd1c46e0", "label": "\u5927\u8fde\u5e02\u56fd\u6709\u8d44\u4ea7\u6295\u8d44\u7ecf\u8425\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5927\u8fde\u5e02\u56fd\u6709\u8d44\u4ea7\u6295\u8d44\u7ecf\u8425\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "orange", "id": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d17\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "label": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d17\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "shape": "dot", "size": 15, "title": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d17\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d18\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "label": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d18\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "shape": "dot", "size": 15, "title": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d18\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1\nType: UE\nLevel: 3"}, {"color": "lightgreen", "id": "qc28d623a7013cdad35d346e9c427197e", "label": "\u6c5f\u82cf\u548c\u9ad8\u6295\u8d44\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6c5f\u82cf\u548c\u9ad8\u6295\u8d44\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "qfd8502ce71683f1517b664bcd0ff409a", "label": "\u5927\u8fde\u5e02\u91d1\u5dde\u533a\u953b\u538b\u4ef6\u5382", "shape": "dot", "size": 15, "title": "\u5927\u8fde\u5e02\u91d1\u5dde\u533a\u953b\u538b\u4ef6\u5382\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "q634b60d18735a97d00437ab3602e0102", "label": "\u5927\u8fde\u51b6\u91d1\u8f74\u627f\u96c6\u56e2\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5927\u8fde\u51b6\u91d1\u8f74\u627f\u96c6\u56e2\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "qf7555e5d4aad7a9f538d2ab22bd9df3b", "label": "\u5927\u8fde\u51b7\u51bb\u673a\u80a1\u4efd\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5927\u8fde\u51b7\u51bb\u673a\u80a1\u4efd\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "q6a0e3b932e39386964687df9a5f3dcb3", "label": "\u70df\u53f0\u672a\u6765\u81ea\u52a8\u88c5\u5907\u6709\u9650\u8d23\u4efb\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u70df\u53f0\u672a\u6765\u81ea\u52a8\u88c5\u5907\u6709\u9650\u8d23\u4efb\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "qa178aa8536e028d1d5572668d7344743", "label": "\u5927\u8fde\u51b0\u5c71\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5927\u8fde\u51b0\u5c71\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "gray", "id": "qc8e352cbc82b4924af68737206ba39c7", "label": "\u6d59\u6c5f\u6052\u9038\u77f3\u5316\u9500\u552e\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d59\u6c5f\u6052\u9038\u77f3\u5316\u9500\u552e\u6709\u9650\u516c\u53f8\nType: \nLevel: 0"}, {"color": "lightgreen", "id": "qdbb28ead658f26509c71d35c0db7d39c", "label": "\u6d59\u6c5f\u6052\u9038\u77f3\u5316\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d59\u6c5f\u6052\u9038\u77f3\u5316\u6709\u9650\u516c\u53f8\nType: E\nLevel: 1"}, {"color": "lightgreen", "id": "q506c05ca24ad35544aec2317e4e24958", "label": "\u6052\u9038\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6052\u9038\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8\nType: E\nLevel: 2"}, {"color": "lightgreen", "id": "qd324d0e379fdb43c94e24fb5ee815ea7", "label": "\u6d59\u6c5f\u6052\u9038\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d59\u6c5f\u6052\u9038\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "q99d815b2a496153f9d2772517fb83b6d", "label": "\u676d\u5dde\u6052\u9038\u6295\u8d44\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u676d\u5dde\u6052\u9038\u6295\u8d44\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "orange", "id": "\u6052\u9038\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u7b2c\u516d\u671f\u5458\u5de5\u6301\u80a1\u8ba1\u5212", "label": "\u6052\u9038\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u7b2c\u516d\u671f\u5458\u5de5\u6301\u80a1\u8ba1\u5212", "shape": "dot", "size": 15, "title": "\u6052\u9038\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u7b2c\u516d\u671f\u5458\u5de5\u6301\u80a1\u8ba1\u5212\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u4e0a\u6d77\u80dc\u5e2e\u79c1\u52df\u57fa\u91d1\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u5171\u9752\u57ce\u80dc\u5e2e\u51ef\u7c73\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09", "label": "\u4e0a\u6d77\u80dc\u5e2e\u79c1\u52df\u57fa\u91d1\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u5171\u9752\u57ce\u80dc\u5e2e\u51ef\u7c73\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09", "shape": "dot", "size": 15, "title": "\u4e0a\u6d77\u80dc\u5e2e\u79c1\u52df\u57fa\u91d1\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u5171\u9752\u57ce\u80dc\u5e2e\u51ef\u7c73\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09\nType: UE\nLevel: 3"}, {"color": "lightgreen", "id": "q026c721b1f464d889a6e9d48b7149f29", "label": "\u5174\u60e0\u5316\u7ea4\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5174\u60e0\u5316\u7ea4\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "orange", "id": "\u6052\u9038\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u7b2c\u4e94\u671f\u5458\u5de5\u6301\u80a1\u8ba1\u5212", "label": "\u6052\u9038\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u7b2c\u4e94\u671f\u5458\u5de5\u6301\u80a1\u8ba1\u5212", "shape": "dot", "size": 15, "title": "\u6052\u9038\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u7b2c\u4e94\u671f\u5458\u5de5\u6301\u80a1\u8ba1\u5212\nType: UE\nLevel: 3"}, {"color": "lightgreen", "id": "q63aae46aff62ac777d1103d883f63656", "label": "\u7533\u4e07\u5b8f\u6e90\u8bc1\u5238\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u7533\u4e07\u5b8f\u6e90\u8bc1\u5238\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "orange", "id": "\u676d\u5dde\u535a\u6d77\u6c47\u91d1\u8d44\u4ea7\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u535a\u6d77\u6c47\u91d1\u6c47\u946b8\u53f7\u8bc1\u5238\u79c1\u52df\u6295\u8d44\u57fa\u91d1", "label": "\u676d\u5dde\u535a\u6d77\u6c47\u91d1\u8d44\u4ea7\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u535a\u6d77\u6c47\u91d1\u6c47\u946b8\u53f7\u8bc1\u5238\u79c1\u52df\u6295\u8d44\u57fa\u91d1", "shape": "dot", "size": 15, "title": "\u676d\u5dde\u535a\u6d77\u6c47\u91d1\u8d44\u4ea7\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u535a\u6d77\u6c47\u91d1\u6c47\u946b8\u53f7\u8bc1\u5238\u79c1\u52df\u6295\u8d44\u57fa\u91d1\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u897f\u85cf\u4fe1\u6258\u6709\u9650\u516c\u53f8-\u897f\u85cf\u4fe1\u6258-\u6cd3\u666f29\u53f7\u96c6\u5408\u8d44\u91d1\u4fe1\u6258\u8ba1\u5212", "label": "\u897f\u85cf\u4fe1\u6258\u6709\u9650\u516c\u53f8-\u897f\u85cf\u4fe1\u6258-\u6cd3\u666f29\u53f7\u96c6\u5408\u8d44\u91d1\u4fe1\u6258\u8ba1\u5212", "shape": "dot", "size": 15, "title": "\u897f\u85cf\u4fe1\u6258\u6709\u9650\u516c\u53f8-\u897f\u85cf\u4fe1\u6258-\u6cd3\u666f29\u53f7\u96c6\u5408\u8d44\u91d1\u4fe1\u6258\u8ba1\u5212\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u9655\u897f\u7701\u56fd\u9645\u4fe1\u6258\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u9655\u56fd\u6295\u00b7\u6052\u9038\u77f3\u5316\u63a7\u80a1\u80a1\u4e1c\u53ca\u5176\u9644\u5c5e\u4f01\u4e1a\u5458\u5de5\u6301\u80a1\u96c6\u5408\u8d44\u91d1\u4fe1\u6258\u8ba1\u5212", "label": "\u9655\u897f\u7701\u56fd\u9645\u4fe1\u6258\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u9655\u56fd\u6295\u00b7\u6052\u9038\u77f3\u5316\u63a7\u80a1\u80a1\u4e1c\u53ca\u5176\u9644\u5c5e\u4f01\u4e1a\u5458\u5de5\u6301\u80a1\u96c6\u5408\u8d44\u91d1\u4fe1\u6258\u8ba1\u5212", "shape": "dot", "size": 15, "title": "\u9655\u897f\u7701\u56fd\u9645\u4fe1\u6258\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u9655\u56fd\u6295\u00b7\u6052\u9038\u77f3\u5316\u63a7\u80a1\u80a1\u4e1c\u53ca\u5176\u9644\u5c5e\u4f01\u4e1a\u5458\u5de5\u6301\u80a1\u96c6\u5408\u8d44\u91d1\u4fe1\u6258\u8ba1\u5212\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u5929\u6d25\u9f0e\u6656\u5143\u535a\u80a1\u6743\u6295\u8d44\u57fa\u91d1", "label": "\u5929\u6d25\u9f0e\u6656\u5143\u535a\u80a1\u6743\u6295\u8d44\u57fa\u91d1", "shape": "dot", "size": 15, "title": "\u5929\u6d25\u9f0e\u6656\u5143\u535a\u80a1\u6743\u6295\u8d44\u57fa\u91d1\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u4e2d\u56fd\u70df\u8349\u603b\u516c\u53f8\u56db\u5ddd\u516c\u53f8", "label": "\u4e2d\u56fd\u70df\u8349\u603b\u516c\u53f8\u56db\u5ddd\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u4e2d\u56fd\u70df\u8349\u603b\u516c\u53f8\u56db\u5ddd\u516c\u53f8\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u5929\u6d25\u9f0e\u6656\u80a1\u6743\u6295\u8d44\u4e00\u671f\u57fa\u91d1", "label": "\u5929\u6d25\u9f0e\u6656\u80a1\u6743\u6295\u8d44\u4e00\u671f\u57fa\u91d1", "shape": "dot", "size": 15, "title": "\u5929\u6d25\u9f0e\u6656\u80a1\u6743\u6295\u8d44\u4e00\u671f\u57fa\u91d1\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u56db\u5ddd\u7701\u77f3\u6cb9\u603b\u516c\u53f8\u6daa\u9675\u5206\u516c\u53f8\u7b49", "label": "\u56db\u5ddd\u7701\u77f3\u6cb9\u603b\u516c\u53f8\u6daa\u9675\u5206\u516c\u53f8\u7b49", "shape": "dot", "size": 15, "title": "\u56db\u5ddd\u7701\u77f3\u6cb9\u603b\u516c\u53f8\u6daa\u9675\u5206\u516c\u53f8\u7b49\nType: UE\nLevel: 3"}, {"color": "gray", "id": "q1303953a2b2c11eebaac00163e355098", "label": "\u5c71\u4e1c\u6052\u8363\u6a61\u80f6\u79d1\u6280\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5c71\u4e1c\u6052\u8363\u6a61\u80f6\u79d1\u6280\u6709\u9650\u516c\u53f8\nType: \nLevel: 0"}, {"color": "skyblue", "id": "\u5218\u6d2a\u4eae", "label": "\u5218\u6d2a\u4eae", "shape": "dot", "size": 15, "title": "\u5218\u6d2a\u4eae\nType: P\nLevel: 1"}, {"color": "skyblue", "id": "\u7530\u5f0f\u8d85", "label": "\u7530\u5f0f\u8d85", "shape": "dot", "size": 15, "title": "\u7530\u5f0f\u8d85\nType: P\nLevel: 1"}, {"color": "gray", "id": "qf6a006e2b7204672abc22f767cfbd3a2", "label": "\u6d59\u6c5f\u5b8f\u9014\u4f9b\u5e94\u94fe\u7ba1\u7406\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d59\u6c5f\u5b8f\u9014\u4f9b\u5e94\u94fe\u7ba1\u7406\u6709\u9650\u516c\u53f8\nType: \nLevel: 0"}, {"color": "lightgreen", "id": "qc54ef82510cb4ceeac827c9d47bb31fb", "label": "\u676d\u5dde\u4e7e\u5174\u8d38\u6613\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u676d\u5dde\u4e7e\u5174\u8d38\u6613\u6709\u9650\u516c\u53f8\nType: E\nLevel: 1"}, {"color": "lightgreen", "id": "qc59fa42a4980ddac34bccfe86a551df3", "label": "\u6d59\u6c5f\u826f\u53cb\u7cae\u8d38\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d59\u6c5f\u826f\u53cb\u7cae\u8d38\u6709\u9650\u516c\u53f8\nType: E\nLevel: 1"}, {"color": "lightgreen", "id": "qd11eb37fb5ddcee6a34b120964779263", "label": "\u7269\u4ea7\u4e2d\u5927\u5316\u5de5\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u7269\u4ea7\u4e2d\u5927\u5316\u5de5\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: E\nLevel: 2"}, {"color": "skyblue", "id": "\u67ef\u60e0\u82f1", "label": "\u67ef\u60e0\u82f1", "shape": "dot", "size": 15, "title": "\u67ef\u60e0\u82f1\nType: P\nLevel: 2"}, {"color": "skyblue", "id": "\u738b\u5fd7\u8499", "label": "\u738b\u5fd7\u8499", "shape": "dot", "size": 15, "title": "\u738b\u5fd7\u8499\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u6c5f\u6d77\u71d5", "label": "\u6c5f\u6d77\u71d5", "shape": "dot", "size": 15, "title": "\u6c5f\u6d77\u71d5\nType: P\nLevel: 2"}, {"color": "skyblue", "id": "\u5b63\u60e0\u541b", "label": "\u5b63\u60e0\u541b", "shape": "dot", "size": 15, "title": "\u5b63\u60e0\u541b\nType: P\nLevel: 2"}, {"color": "skyblue", "id": "\u5b63\u5fd7\u541b", "label": "\u5b63\u5fd7\u541b", "shape": "dot", "size": 15, "title": "\u5b63\u5fd7\u541b\nType: P\nLevel: 2"}, {"color": "lightgreen", "id": "q60024c73c3dc4f22ba543a8595daaf44", "label": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u521b\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u521b\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "q5cf43fbc80fad22790d334101ce6b391", "label": "\u7269\u4ea7\u4e2d\u5927\u96c6\u56e2\u80a1\u4efd\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u7269\u4ea7\u4e2d\u5927\u96c6\u56e2\u80a1\u4efd\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "q8c68d6c8b53a4f488581a2cd4dd34e51", "label": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u7f8e\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u7f8e\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09\nType: E\nLevel: 3"}, {"color": "skyblue", "id": "\u5510\u5b87\u6e05", "label": "\u5510\u5b87\u6e05", "shape": "dot", "size": 15, "title": "\u5510\u5b87\u6e05\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u6bdb\u9752\u519b", "label": "\u6bdb\u9752\u519b", "shape": "dot", "size": 15, "title": "\u6bdb\u9752\u519b\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u50a8\u6625\u94f6", "label": "\u50a8\u6625\u94f6", "shape": "dot", "size": 15, "title": "\u50a8\u6625\u94f6\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u90ed\u5065", "label": "\u90ed\u5065", "shape": "dot", "size": 15, "title": "\u90ed\u5065\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u738b\u8d5b\u6167", "label": "\u738b\u8d5b\u6167", "shape": "dot", "size": 15, "title": "\u738b\u8d5b\u6167\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u4efb\u9704", "label": "\u4efb\u9704", "shape": "dot", "size": 15, "title": "\u4efb\u9704\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u65b9\u771f\u8363", "label": "\u65b9\u771f\u8363", "shape": "dot", "size": 15, "title": "\u65b9\u771f\u8363\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u65f6\u8d1e\u4ed1", "label": "\u65f6\u8d1e\u4ed1", "shape": "dot", "size": 15, "title": "\u65f6\u8d1e\u4ed1\nType: P\nLevel: 3"}, {"color": "lightgreen", "id": "q522d2812423e424e859a8c3cf057c696", "label": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u5584\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u5584\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "qcd958990b49440c288cf0ce3fb6a6400", "label": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u4e1a\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u4e1a\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "q558d1d56844942c599d378aba8aaa68a", "label": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u822a\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u822a\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09\nType: E\nLevel: 3"}, {"color": "skyblue", "id": "\u9648\u6d77\u5cf0", "label": "\u9648\u6d77\u5cf0", "shape": "dot", "size": 15, "title": "\u9648\u6d77\u5cf0\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u5468\u5251\u51cc", "label": "\u5468\u5251\u51cc", "shape": "dot", "size": 15, "title": "\u5468\u5251\u51cc\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u9648\u6d77\u6ee8", "label": "\u9648\u6d77\u6ee8", "shape": "dot", "size": 15, "title": "\u9648\u6d77\u6ee8\nType: P\nLevel: 3"}, {"color": "lightgreen", "id": "qcedbd118d72a485ea33e83b20c86d129", "label": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u6656\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u6656\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "q17faa060c10e4adab2ae2e7fd59c7e61", "label": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u771f\u6295\u8d44\u7ba1\u7406\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u771f\u6295\u8d44\u7ba1\u7406\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "qd6cd13b84d7f11ee82ec00163e355098", "label": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u6c47\u4f01\u4e1a\u7ba1\u7406\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u6885\u5c71\u4fdd\u7a0e\u6e2f\u533a\u5b8f\u65b0\u6c47\u4f01\u4e1a\u7ba1\u7406\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09\nType: E\nLevel: 3"}, {"color": "skyblue", "id": "\u5f20\u98da", "label": "\u5f20\u98da", "shape": "dot", "size": 15, "title": "\u5f20\u98da\nType: P\nLevel: 3"}, {"color": "lightgreen", "id": "qca6f5cac214540a7123da22e73b180a2", "label": "\u6d59\u6c5f\u7701\u56fd\u6709\u8d44\u672c\u8fd0\u8425\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d59\u6c5f\u7701\u56fd\u6709\u8d44\u672c\u8fd0\u8425\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "q9f6b5f42352ec962efd8d82f49047f17", "label": "\u6d59\u6c5f\u7701\u4ea4\u901a\u6295\u8d44\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d59\u6c5f\u7701\u4ea4\u901a\u6295\u8d44\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "lightgreen", "id": "qbb0db37d1243a0404eaa7dacf298dc92", "label": "\u6d59\u6c5f\u7701\u8d22\u52a1\u5f00\u53d1\u6709\u9650\u8d23\u4efb\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d59\u6c5f\u7701\u8d22\u52a1\u5f00\u53d1\u6709\u9650\u8d23\u4efb\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "orange", "id": "\u6d59\u5546\u8bc1\u5238\u8d44\u7ba1-\u6d59\u6c5f\u7701\u56fd\u6709\u8d44\u672c\u8fd0\u8425\u6709\u9650\u516c\u53f8-\u6d59\u5546\u8d44\u7ba1\u6d59\u6c5f\u56fd\u6709\u4e0a\u5e02\u516c\u53f8\u9ad8\u8d28\u91cf\u53d1\u5c55\u5355\u4e00\u8d44\u4ea7\u7ba1\u7406\u8ba1\u5212", "label": "\u6d59\u5546\u8bc1\u5238\u8d44\u7ba1-\u6d59\u6c5f\u7701\u56fd\u6709\u8d44\u672c\u8fd0\u8425\u6709\u9650\u516c\u53f8-\u6d59\u5546\u8d44\u7ba1\u6d59\u6c5f\u56fd\u6709\u4e0a\u5e02\u516c\u53f8\u9ad8\u8d28\u91cf\u53d1\u5c55\u5355\u4e00\u8d44\u4ea7\u7ba1\u7406\u8ba1\u5212", "shape": "dot", "size": 15, "title": "\u6d59\u5546\u8bc1\u5238\u8d44\u7ba1-\u6d59\u6c5f\u7701\u56fd\u6709\u8d44\u672c\u8fd0\u8425\u6709\u9650\u516c\u53f8-\u6d59\u5546\u8d44\u7ba1\u6d59\u6c5f\u56fd\u6709\u4e0a\u5e02\u516c\u53f8\u9ad8\u8d28\u91cf\u53d1\u5c55\u5355\u4e00\u8d44\u4ea7\u7ba1\u7406\u8ba1\u5212\nType: UE\nLevel: 3"}, {"color": "lightgreen", "id": "q1c203b5ef43811ecbbce00163e0ee983", "label": "\u6d59\u6c5f\u6d59\u8d22\u8d44\u672c\u7ba1\u7406\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d59\u6c5f\u6d59\u8d22\u8d44\u672c\u7ba1\u7406\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "orange", "id": "\u4e2d\u56fd\u519c\u4e1a\u94f6\u884c\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u4e2d\u8bc1500\u4ea4\u6613\u578b\u5f00\u653e\u5f0f\u6307\u6570\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "label": "\u4e2d\u56fd\u519c\u4e1a\u94f6\u884c\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u4e2d\u8bc1500\u4ea4\u6613\u578b\u5f00\u653e\u5f0f\u6307\u6570\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "shape": "dot", "size": 15, "title": "\u4e2d\u56fd\u519c\u4e1a\u94f6\u884c\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u4e2d\u8bc1500\u4ea4\u6613\u578b\u5f00\u653e\u5f0f\u6307\u6570\u8bc1\u5238\u6295\u8d44\u57fa\u91d1\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u4e0a\u6d77\u6d8c\u6d25\u6295\u8d44\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u6d8c\u6d25\u6d8c\u946b\u591a\u7b56\u756517\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "label": "\u4e0a\u6d77\u6d8c\u6d25\u6295\u8d44\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u6d8c\u6d25\u6d8c\u946b\u591a\u7b56\u756517\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "shape": "dot", "size": 15, "title": "\u4e0a\u6d77\u6d8c\u6d25\u6295\u8d44\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u6d8c\u6d25\u6d8c\u946b\u591a\u7b56\u756517\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u4e0a\u6d77\u6d8c\u6d25\u6295\u8d44\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u6d8c\u6d25\u6d8c\u946b\u591a\u7b56\u756516\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "label": "\u4e0a\u6d77\u6d8c\u6d25\u6295\u8d44\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u6d8c\u6d25\u6d8c\u946b\u591a\u7b56\u756516\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "shape": "dot", "size": 15, "title": "\u4e0a\u6d77\u6d8c\u6d25\u6295\u8d44\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u6d8c\u6d25\u6d8c\u946b\u591a\u7b56\u756516\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u9648\u519b", "label": "\u9648\u519b", "shape": "dot", "size": 15, "title": "\u9648\u519b\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u65e0\u9650\u552e\u6761\u4ef6\u6d41\u901a\u80a1", "label": "\u65e0\u9650\u552e\u6761\u4ef6\u6d41\u901a\u80a1", "shape": "dot", "size": 15, "title": "\u65e0\u9650\u552e\u6761\u4ef6\u6d41\u901a\u80a1\nType: UE\nLevel: 3"}, {"color": "orange", "id": "\u6709\u9650\u552e\u6761\u4ef6\u6d41\u901a\u80a1", "label": "\u6709\u9650\u552e\u6761\u4ef6\u6d41\u901a\u80a1", "shape": "dot", "size": 15, "title": "\u6709\u9650\u552e\u6761\u4ef6\u6d41\u901a\u80a1\nType: UE\nLevel: 3"}, {"color": "gray", "id": "q13f522eea4ab11eeb66400163e355098", "label": "\u4e0a\u6d77\u4e45\u4e00\u56fd\u9645\u8d38\u6613\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u4e0a\u6d77\u4e45\u4e00\u56fd\u9645\u8d38\u6613\u6709\u9650\u516c\u53f8\nType: \nLevel: 0"}, {"color": "lightgreen", "id": "qfe6ef60363b84644a8ceca1208a5ef6b", "label": "\u6d59\u6c5f\u76ca\u5584\u4f9b\u5e94\u94fe\u7ba1\u7406\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u6d59\u6c5f\u76ca\u5584\u4f9b\u5e94\u94fe\u7ba1\u7406\u6709\u9650\u516c\u53f8\nType: E\nLevel: 1"}, {"color": "lightgreen", "id": "qdf3b2963383946eebcbcd4c57c0deb63", "label": "\u676d\u5dde\u4e07\u5b9c\u83b1\u79d1\u6280\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u676d\u5dde\u4e07\u5b9c\u83b1\u79d1\u6280\u6709\u9650\u516c\u53f8\nType: E\nLevel: 2"}, {"color": "lightgreen", "id": "q88337256d61f117a0b37dd422d057993", "label": "\u5b81\u6ce2\u8fb0\u6e90\u73af\u4fdd\u79d1\u6280\u80a1\u4efd\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u8fb0\u6e90\u73af\u4fdd\u79d1\u6280\u80a1\u4efd\u6709\u9650\u516c\u53f8\nType: E\nLevel: 2"}, {"color": "skyblue", "id": "\u6c88\u9896\u534e", "label": "\u6c88\u9896\u534e", "shape": "dot", "size": 15, "title": "\u6c88\u9896\u534e\nType: P\nLevel: 3"}, {"color": "lightgreen", "id": "q83ef7642ae1e81e5ce68380ebd88671d", "label": "\u5b81\u6ce2\u534e\u6668\u73af\u5883\u5de5\u7a0b\u6709\u9650\u516c\u53f8\uff08\u53d1\u8d77\u4eba\uff09", "shape": "dot", "size": 15, "title": "\u5b81\u6ce2\u534e\u6668\u73af\u5883\u5de5\u7a0b\u6709\u9650\u516c\u53f8\uff08\u53d1\u8d77\u4eba\uff09\nType: E\nLevel: 3"}, {"color": "skyblue", "id": "\u845b\u4e3d\u5a1c", "label": "\u845b\u4e3d\u5a1c", "shape": "dot", "size": 15, "title": "\u845b\u4e3d\u5a1c\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u738b\u638c\u6743\uff08\u53d1\u8d77\u4eba\uff09", "label": "\u738b\u638c\u6743\uff08\u53d1\u8d77\u4eba\uff09", "shape": "dot", "size": 15, "title": "\u738b\u638c\u6743\uff08\u53d1\u8d77\u4eba\uff09\nType: P\nLevel: 3"}, {"color": "gray", "id": "q40e5d6d4b61f63d81612af77aaae21c3", "label": "\u5c71\u4e1c\u5bff\u5149\u9c81\u6e05\u77f3\u5316\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5c71\u4e1c\u5bff\u5149\u9c81\u6e05\u77f3\u5316\u6709\u9650\u516c\u53f8\nType: \nLevel: 0"}, {"color": "lightgreen", "id": "qffea752789a0e87b9ddd04cdc85cfc8c", "label": "\u5bff\u5149\u5e02\u53cb\u90a6\u5316\u5de5\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u5bff\u5149\u5e02\u53cb\u90a6\u5316\u5de5\u6709\u9650\u516c\u53f8\nType: E\nLevel: 1"}, {"color": "skyblue", "id": "\u738b\u6cb3\u6e05", "label": "\u738b\u6cb3\u6e05", "shape": "dot", "size": 15, "title": "\u738b\u6cb3\u6e05\nType: P\nLevel: 1"}, {"color": "skyblue", "id": "\u738b\u5efa\u6e05", "label": "\u738b\u5efa\u6e05", "shape": "dot", "size": 15, "title": "\u738b\u5efa\u6e05\nType: P\nLevel: 2"}, {"color": "skyblue", "id": "\u4faf\u4e50\u53cb", "label": "\u4faf\u4e50\u53cb", "shape": "dot", "size": 15, "title": "\u4faf\u4e50\u53cb\nType: P\nLevel: 2"}, {"color": "skyblue", "id": "\u738b\u5b66\u6e05", "label": "\u738b\u5b66\u6e05", "shape": "dot", "size": 15, "title": "\u738b\u5b66\u6e05\nType: P\nLevel: 1"}, {"color": "skyblue", "id": "\u738b\u91d1\u53cb", "label": "\u738b\u91d1\u53cb", "shape": "dot", "size": 15, "title": "\u738b\u91d1\u53cb\nType: P\nLevel: 2"}, {"color": "skyblue", "id": "\u4faf\u6548\u6885", "label": "\u4faf\u6548\u6885", "shape": "dot", "size": 15, "title": "\u4faf\u6548\u6885\nType: P\nLevel: 2"}, {"color": "skyblue", "id": "\u5f90\u6c5d\u589e", "label": "\u5f90\u6c5d\u589e", "shape": "dot", "size": 15, "title": "\u5f90\u6c5d\u589e\nType: P\nLevel: 2"}, {"color": "gray", "id": "qff3ad5f2a99c11ecb44600163e0ee983", "label": "\u65b0\u521b\u4e91\u8054\u4ea7\u4e1a\u53d1\u5c55\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u65b0\u521b\u4e91\u8054\u4ea7\u4e1a\u53d1\u5c55\u6709\u9650\u516c\u53f8\nType: \nLevel: 0"}, {"color": "lightgreen", "id": "qd554385addeb4278db733733bac68557", "label": "\u65b0\u5e0c\u671b\u5316\u5de5\u6295\u8d44\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u65b0\u5e0c\u671b\u5316\u5de5\u6295\u8d44\u6709\u9650\u516c\u53f8\nType: E\nLevel: 1"}, {"color": "lightgreen", "id": "q9b4e2c574cf4a3c4cf23159dcbf8a0fa", "label": "\u65b0\u5e0c\u671b\u6295\u8d44\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u65b0\u5e0c\u671b\u6295\u8d44\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: E\nLevel: 2"}, {"color": "lightgreen", "id": "qd48c914853f177efc7a6ddd8bb95a522", "label": "\u65b0\u5e0c\u671b\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u65b0\u5e0c\u671b\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: E\nLevel: 2"}, {"color": "lightgreen", "id": "q994ba7f725cc45809fd951b53cc30034", "label": "\u65b0\u5e0c\u671b\u63a7\u80a1\u96c6\u56e2\u6709\u9650\u516c\u53f8", "shape": "dot", "size": 15, "title": "\u65b0\u5e0c\u671b\u63a7\u80a1\u96c6\u56e2\u6709\u9650\u516c\u53f8\nType: E\nLevel: 3"}, {"color": "skyblue", "id": "\u674e\u5dcd", "label": "\u674e\u5dcd", "shape": "dot", "size": 15, "title": "\u674e\u5dcd\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u5218\u6c38\u597d", "label": "\u5218\u6c38\u597d", "shape": "dot", "size": 15, "title": "\u5218\u6c38\u597d\nType: P\nLevel: 3"}, {"color": "skyblue", "id": "\u5218\u7545", "label": "\u5218\u7545", "shape": "dot", "size": 15, "title": "\u5218\u7545\nType: P\nLevel: 3"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "q5d6c6e2ee5e04a76af906869b8db252e", "label": "100.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 100.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q53439a653c3545c2bb6d2b17ef3009a5", "value": 1}, {"arrows": "to", "from": "q53439a653c3545c2bb6d2b17ef3009a5", "label": "95.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 95.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u738b\u4e91\u5a1f", "value": 1}, {"arrows": "to", "from": "q53439a653c3545c2bb6d2b17ef3009a5", "label": "5.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 5.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u7ae0\u7acb", "value": 1}, {"arrows": "to", "from": "q51d63cb97ad56fe0677663d6894f382d", "label": "100.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 100.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q91ad208643d20e24aaddc2e0442951f3", "value": 1}, {"arrows": "to", "from": "q91ad208643d20e24aaddc2e0442951f3", "label": "100.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 100.00%\n\u7c7b\u578b: \u539f\u5de5\u5546\u80a1\u4e1c", "to": "qeb3d76b013bfb3a02fb7de2779f9073c", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "29.84%", "title": "\u6301\u80a1\u6bd4\u4f8b: 29.84%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "q24a4a64e9e66b9da9074272e14f190fa", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "21.29%", "title": "\u6301\u80a1\u6bd4\u4f8b: 21.29%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "q39ddf61faffb427f3b8a055d8f930300", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "11.24%", "title": "\u6301\u80a1\u6bd4\u4f8b: 11.24%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u8303\u7ea2\u536b", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "10.41%", "title": "\u6301\u80a1\u6bd4\u4f8b: 10.41%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u5fb7\u8bda\u5229\u56fd\u9645\u96c6\u56e2\u6709\u9650\u516c\u53f8", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "3.07%", "title": "\u6301\u80a1\u6bd4\u4f8b: 3.07%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u9999\u6e2f\u4e2d\u592e\u7ed3\u7b97\u6709\u9650\u516c\u53f8", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "1.17%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.17%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d16\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "0.98%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.98%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "q798313c3f322e9e78ec3e761dd1c46e0", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "0.94%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.94%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d17\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "0.92%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.92%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u7384\u5143\u79c1\u52df\u57fa\u91d1\u6295\u8d44\u7ba1\u7406\uff08\u5e7f\u4e1c\uff09\u6709\u9650\u516c\u53f8-\u7384\u5143\u5143\u5b9d18\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "0.88%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.88%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "qc28d623a7013cdad35d346e9c427197e", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "0.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qfd8502ce71683f1517b664bcd0ff409a", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "0.01%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.01%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q634b60d18735a97d00437ab3602e0102", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "0.02%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.02%\n\u7c7b\u578b: \u539f\u5de5\u5546\u80a1\u4e1c", "to": "qf7555e5d4aad7a9f538d2ab22bd9df3b", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "0.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q6a0e3b932e39386964687df9a5f3dcb3", "value": 1}, {"arrows": "to", "from": "qeb3d76b013bfb3a02fb7de2779f9073c", "label": "0.96%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.96%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qa178aa8536e028d1d5572668d7344743", "value": 1}, {"arrows": "to", "from": "qc8e352cbc82b4924af68737206ba39c7", "label": "100.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 100.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qdbb28ead658f26509c71d35c0db7d39c", "value": 1}, {"arrows": "to", "from": "qdbb28ead658f26509c71d35c0db7d39c", "label": "100.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 100.00%\n\u7c7b\u578b: \u539f\u5de5\u5546\u80a1\u4e1c", "to": "q506c05ca24ad35544aec2317e4e24958", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "10.86%", "title": "\u6301\u80a1\u6bd4\u4f8b: 10.86%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qd324d0e379fdb43c94e24fb5ee815ea7", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "6.99%", "title": "\u6301\u80a1\u6bd4\u4f8b: 6.99%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "q99d815b2a496153f9d2772517fb83b6d", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "3.11%", "title": "\u6301\u80a1\u6bd4\u4f8b: 3.11%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u6052\u9038\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u7b2c\u516d\u671f\u5458\u5de5\u6301\u80a1\u8ba1\u5212", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "2.68%", "title": "\u6301\u80a1\u6bd4\u4f8b: 2.68%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u4e0a\u6d77\u80dc\u5e2e\u79c1\u52df\u57fa\u91d1\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u5171\u9752\u57ce\u80dc\u5e2e\u51ef\u7c73\u6295\u8d44\u5408\u4f19\u4f01\u4e1a\uff08\u6709\u9650\u5408\u4f19\uff09", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "2.66%", "title": "\u6301\u80a1\u6bd4\u4f8b: 2.66%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "q026c721b1f464d889a6e9d48b7149f29", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "2.38%", "title": "\u6301\u80a1\u6bd4\u4f8b: 2.38%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u6052\u9038\u77f3\u5316\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u7b2c\u4e94\u671f\u5458\u5de5\u6301\u80a1\u8ba1\u5212", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "1.94%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.94%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "q63aae46aff62ac777d1103d883f63656", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "1.36%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.36%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u676d\u5dde\u535a\u6d77\u6c47\u91d1\u8d44\u4ea7\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u535a\u6d77\u6c47\u91d1\u6c47\u946b8\u53f7\u8bc1\u5238\u79c1\u52df\u6295\u8d44\u57fa\u91d1", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "1.30%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.30%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u897f\u85cf\u4fe1\u6258\u6709\u9650\u516c\u53f8-\u897f\u85cf\u4fe1\u6258-\u6cd3\u666f29\u53f7\u96c6\u5408\u8d44\u91d1\u4fe1\u6258\u8ba1\u5212", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "1.10%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.10%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u9655\u897f\u7701\u56fd\u9645\u4fe1\u6258\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u9655\u56fd\u6295\u00b7\u6052\u9038\u77f3\u5316\u63a7\u80a1\u80a1\u4e1c\u53ca\u5176\u9644\u5c5e\u4f01\u4e1a\u5458\u5de5\u6301\u80a1\u96c6\u5408\u8d44\u91d1\u4fe1\u6258\u8ba1\u5212", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "0.21%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.21%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5929\u6d25\u9f0e\u6656\u5143\u535a\u80a1\u6743\u6295\u8d44\u57fa\u91d1", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "0.08%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.08%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u4e2d\u56fd\u70df\u8349\u603b\u516c\u53f8\u56db\u5ddd\u516c\u53f8", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "0.74%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.74%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5929\u6d25\u9f0e\u6656\u80a1\u6743\u6295\u8d44\u4e00\u671f\u57fa\u91d1", "value": 1}, {"arrows": "to", "from": "q506c05ca24ad35544aec2317e4e24958", "label": "3.85%", "title": "\u6301\u80a1\u6bd4\u4f8b: 3.85%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u56db\u5ddd\u7701\u77f3\u6cb9\u603b\u516c\u53f8\u6daa\u9675\u5206\u516c\u53f8\u7b49", "value": 1}, {"arrows": "to", "from": "q1303953a2b2c11eebaac00163e355098", "label": "80.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 80.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5218\u6d2a\u4eae", "value": 1}, {"arrows": "to", "from": "q1303953a2b2c11eebaac00163e355098", "label": "20.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 20.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u7530\u5f0f\u8d85", "value": 1}, {"arrows": "to", "from": "qf6a006e2b7204672abc22f767cfbd3a2", "label": "45.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 45.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qc54ef82510cb4ceeac827c9d47bb31fb", "value": 1}, {"arrows": "to", "from": "qf6a006e2b7204672abc22f767cfbd3a2", "label": "11.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 11.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qc59fa42a4980ddac34bccfe86a551df3", "value": 1}, {"arrows": "to", "from": "qf6a006e2b7204672abc22f767cfbd3a2", "label": "44.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 44.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qd11eb37fb5ddcee6a34b120964779263", "value": 1}, {"arrows": "to", "from": "qc54ef82510cb4ceeac827c9d47bb31fb", "label": "30.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 30.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u67ef\u60e0\u82f1", "value": 1}, {"arrows": "to", "from": "qc54ef82510cb4ceeac827c9d47bb31fb", "label": "70.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 70.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u738b\u5fd7\u8499", "value": 1}, {"arrows": "to", "from": "qc59fa42a4980ddac34bccfe86a551df3", "label": "2.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 2.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u6c5f\u6d77\u71d5", "value": 1}, {"arrows": "to", "from": "qc59fa42a4980ddac34bccfe86a551df3", "label": "85.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 85.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5b63\u60e0\u541b", "value": 1}, {"arrows": "to", "from": "qc59fa42a4980ddac34bccfe86a551df3", "label": "13.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 13.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5b63\u5fd7\u541b", "value": 1}, {"arrows": "to", "from": "qd11eb37fb5ddcee6a34b120964779263", "label": "20.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 20.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q60024c73c3dc4f22ba543a8595daaf44", "value": 1}, {"arrows": "to", "from": "qd11eb37fb5ddcee6a34b120964779263", "label": "80.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 80.00%\n\u7c7b\u578b: \u539f\u5de5\u5546\u80a1\u4e1c", "to": "q5cf43fbc80fad22790d334101ce6b391", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "18.39%", "title": "\u6301\u80a1\u6bd4\u4f8b: 18.39%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q8c68d6c8b53a4f488581a2cd4dd34e51", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "5.20%", "title": "\u6301\u80a1\u6bd4\u4f8b: 5.20%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5510\u5b87\u6e05", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "1.29%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.29%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u6bdb\u9752\u519b", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "1.06%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.06%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u50a8\u6625\u94f6", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "5.20%", "title": "\u6301\u80a1\u6bd4\u4f8b: 5.20%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u90ed\u5065", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "4.24%", "title": "\u6301\u80a1\u6bd4\u4f8b: 4.24%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u738b\u8d5b\u6167", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "1.33%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.33%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u4efb\u9704", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "1.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u65b9\u771f\u8363", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "5.20%", "title": "\u6301\u80a1\u6bd4\u4f8b: 5.20%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u65f6\u8d1e\u4ed1", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "10.89%", "title": "\u6301\u80a1\u6bd4\u4f8b: 10.89%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q522d2812423e424e859a8c3cf057c696", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "6.45%", "title": "\u6301\u80a1\u6bd4\u4f8b: 6.45%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qcd958990b49440c288cf0ce3fb6a6400", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "4.40%", "title": "\u6301\u80a1\u6bd4\u4f8b: 4.40%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q558d1d56844942c599d378aba8aaa68a", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "4.24%", "title": "\u6301\u80a1\u6bd4\u4f8b: 4.24%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u9648\u6d77\u5cf0", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "1.56%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.56%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5468\u5251\u51cc", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "8.47%", "title": "\u6301\u80a1\u6bd4\u4f8b: 8.47%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u9648\u6d77\u6ee8", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "3.69%", "title": "\u6301\u80a1\u6bd4\u4f8b: 3.69%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qcedbd118d72a485ea33e83b20c86d129", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "0.05%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.05%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q17faa060c10e4adab2ae2e7fd59c7e61", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "2.18%", "title": "\u6301\u80a1\u6bd4\u4f8b: 2.18%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qd6cd13b84d7f11ee82ec00163e355098", "value": 1}, {"arrows": "to", "from": "q60024c73c3dc4f22ba543a8595daaf44", "label": "15.18%", "title": "\u6301\u80a1\u6bd4\u4f8b: 15.18%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5f20\u98da", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "25.43%", "title": "\u6301\u80a1\u6bd4\u4f8b: 25.43%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "qca6f5cac214540a7123da22e73b180a2", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "17.19%", "title": "\u6301\u80a1\u6bd4\u4f8b: 17.19%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "q9f6b5f42352ec962efd8d82f49047f17", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "2.80%", "title": "\u6301\u80a1\u6bd4\u4f8b: 2.80%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "qbb0db37d1243a0404eaa7dacf298dc92", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "2.31%", "title": "\u6301\u80a1\u6bd4\u4f8b: 2.31%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u6d59\u5546\u8bc1\u5238\u8d44\u7ba1-\u6d59\u6c5f\u7701\u56fd\u6709\u8d44\u672c\u8fd0\u8425\u6709\u9650\u516c\u53f8-\u6d59\u5546\u8d44\u7ba1\u6d59\u6c5f\u56fd\u6709\u4e0a\u5e02\u516c\u53f8\u9ad8\u8d28\u91cf\u53d1\u5c55\u5355\u4e00\u8d44\u4ea7\u7ba1\u7406\u8ba1\u5212", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "2.20%", "title": "\u6301\u80a1\u6bd4\u4f8b: 2.20%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u9999\u6e2f\u4e2d\u592e\u7ed3\u7b97\u6709\u9650\u516c\u53f8", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "0.80%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.80%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "q1c203b5ef43811ecbbce00163e0ee983", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "0.77%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.77%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u4e2d\u56fd\u519c\u4e1a\u94f6\u884c\u80a1\u4efd\u6709\u9650\u516c\u53f8-\u4e2d\u8bc1500\u4ea4\u6613\u578b\u5f00\u653e\u5f0f\u6307\u6570\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "0.75%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.75%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u4e0a\u6d77\u6d8c\u6d25\u6295\u8d44\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u6d8c\u6d25\u6d8c\u946b\u591a\u7b56\u756517\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "0.65%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.65%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u4e0a\u6d77\u6d8c\u6d25\u6295\u8d44\u7ba1\u7406\u6709\u9650\u516c\u53f8-\u6d8c\u6d25\u6d8c\u946b\u591a\u7b56\u756516\u53f7\u79c1\u52df\u8bc1\u5238\u6295\u8d44\u57fa\u91d1", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "0.49%", "title": "\u6301\u80a1\u6bd4\u4f8b: 0.49%\n\u7c7b\u578b: \u5341\u5927\u80a1\u4e1c", "to": "\u9648\u519b", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "98.50%", "title": "\u6301\u80a1\u6bd4\u4f8b: 98.50%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u65e0\u9650\u552e\u6761\u4ef6\u6d41\u901a\u80a1", "value": 1}, {"arrows": "to", "from": "q5cf43fbc80fad22790d334101ce6b391", "label": "1.51%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.51%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u6709\u9650\u552e\u6761\u4ef6\u6d41\u901a\u80a1", "value": 1}, {"arrows": "to", "from": "q13f522eea4ab11eeb66400163e355098", "label": "100.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 100.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qfe6ef60363b84644a8ceca1208a5ef6b", "value": 1}, {"arrows": "to", "from": "qfe6ef60363b84644a8ceca1208a5ef6b", "label": "45.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 45.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qdf3b2963383946eebcbcd4c57c0deb63", "value": 1}, {"arrows": "to", "from": "qfe6ef60363b84644a8ceca1208a5ef6b", "label": "11.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 11.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q88337256d61f117a0b37dd422d057993", "value": 1}, {"arrows": "to", "from": "qfe6ef60363b84644a8ceca1208a5ef6b", "label": "44.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 44.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qd11eb37fb5ddcee6a34b120964779263", "value": 1}, {"arrows": "to", "from": "qdf3b2963383946eebcbcd4c57c0deb63", "label": "33.33%", "title": "\u6301\u80a1\u6bd4\u4f8b: 33.33%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u738b\u5fd7\u8499", "value": 1}, {"arrows": "to", "from": "qdf3b2963383946eebcbcd4c57c0deb63", "label": "66.67%", "title": "\u6301\u80a1\u6bd4\u4f8b: 66.67%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u6c88\u9896\u534e", "value": 1}, {"arrows": "to", "from": "q88337256d61f117a0b37dd422d057993", "label": "", "title": "\u6301\u80a1\u6bd4\u4f8b: \n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q83ef7642ae1e81e5ce68380ebd88671d", "value": 1}, {"arrows": "to", "from": "q88337256d61f117a0b37dd422d057993", "label": "51.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 51.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u845b\u4e3d\u5a1c", "value": 1}, {"arrows": "to", "from": "q88337256d61f117a0b37dd422d057993", "label": "49.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 49.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u738b\u638c\u6743\uff08\u53d1\u8d77\u4eba\uff09", "value": 1}, {"arrows": "to", "from": "q40e5d6d4b61f63d81612af77aaae21c3", "label": "26.67%", "title": "\u6301\u80a1\u6bd4\u4f8b: 26.67%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qffea752789a0e87b9ddd04cdc85cfc8c", "value": 1}, {"arrows": "to", "from": "q40e5d6d4b61f63d81612af77aaae21c3", "label": "13.33%", "title": "\u6301\u80a1\u6bd4\u4f8b: 13.33%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u738b\u6cb3\u6e05", "value": 1}, {"arrows": "to", "from": "q40e5d6d4b61f63d81612af77aaae21c3", "label": "6.67%", "title": "\u6301\u80a1\u6bd4\u4f8b: 6.67%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u738b\u5efa\u6e05", "value": 1}, {"arrows": "to", "from": "q40e5d6d4b61f63d81612af77aaae21c3", "label": "6.67%", "title": "\u6301\u80a1\u6bd4\u4f8b: 6.67%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u4faf\u4e50\u53cb", "value": 1}, {"arrows": "to", "from": "q40e5d6d4b61f63d81612af77aaae21c3", "label": "46.67%", "title": "\u6301\u80a1\u6bd4\u4f8b: 46.67%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u738b\u5b66\u6e05", "value": 1}, {"arrows": "to", "from": "qffea752789a0e87b9ddd04cdc85cfc8c", "label": "15.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 15.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u738b\u5efa\u6e05", "value": 1}, {"arrows": "to", "from": "qffea752789a0e87b9ddd04cdc85cfc8c", "label": "10.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 10.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u738b\u91d1\u53cb", "value": 1}, {"arrows": "to", "from": "qffea752789a0e87b9ddd04cdc85cfc8c", "label": "15.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 15.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u4faf\u4e50\u53cb", "value": 1}, {"arrows": "to", "from": "qffea752789a0e87b9ddd04cdc85cfc8c", "label": "15.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 15.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u4faf\u6548\u6885", "value": 1}, {"arrows": "to", "from": "qffea752789a0e87b9ddd04cdc85cfc8c", "label": "45.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 45.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5f90\u6c5d\u589e", "value": 1}, {"arrows": "to", "from": "qff3ad5f2a99c11ecb44600163e0ee983", "label": "100.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 100.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qd554385addeb4278db733733bac68557", "value": 1}, {"arrows": "to", "from": "qd554385addeb4278db733733bac68557", "label": "75.42%", "title": "\u6301\u80a1\u6bd4\u4f8b: 75.42%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q9b4e2c574cf4a3c4cf23159dcbf8a0fa", "value": 1}, {"arrows": "to", "from": "qd554385addeb4278db733733bac68557", "label": "24.58%", "title": "\u6301\u80a1\u6bd4\u4f8b: 24.58%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "qd48c914853f177efc7a6ddd8bb95a522", "value": 1}, {"arrows": "to", "from": "q9b4e2c574cf4a3c4cf23159dcbf8a0fa", "label": "100.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 100.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q994ba7f725cc45809fd951b53cc30034", "value": 1}, {"arrows": "to", "from": "qd48c914853f177efc7a6ddd8bb95a522", "label": "1.31%", "title": "\u6301\u80a1\u6bd4\u4f8b: 1.31%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u674e\u5dcd", "value": 1}, {"arrows": "to", "from": "qd48c914853f177efc7a6ddd8bb95a522", "label": "75.00%", "title": "\u6301\u80a1\u6bd4\u4f8b: 75.00%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "q994ba7f725cc45809fd951b53cc30034", "value": 1}, {"arrows": "to", "from": "qd48c914853f177efc7a6ddd8bb95a522", "label": "14.60%", "title": "\u6301\u80a1\u6bd4\u4f8b: 14.60%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5218\u6c38\u597d", "value": 1}, {"arrows": "to", "from": "qd48c914853f177efc7a6ddd8bb95a522", "label": "9.09%", "title": "\u6301\u80a1\u6bd4\u4f8b: 9.09%\n\u7c7b\u578b: \u5de5\u5546\u80a1\u4e1c", "to": "\u5218\u7545", "value": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": true, "barnesHut": {"gravitationalConstant": -30000, "centralGravity": 0.6, "springLength": 150, "springConstant": 0.05, "damping": 0.15, "avoidOverlap": 0.1}, "maxVelocity": 50, "minVelocity": 0.1, "solver": "barnesHut", "stabilization": {"enabled": true, "iterations": 1000, "updateInterval": 100, "onlyDynamicEdges": false, "fit": true}, "adaptiveTimestep": true}, "interaction": {"hover": true, "tooltipDelay": 200, "navigationButtons": true, "keyboard": true}};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
